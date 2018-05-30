@@ -13,6 +13,23 @@ from PIL import Image
 
 INTERVAL = 2   #秒间隔
 
+'''
+PIL.Image转换成OpenCV格式
+
+image = Image.open("plane.jpg")  
+image.show()  
+img = cv2.cvtColor(numpy.asarray(image),cv2.COLOR_RGB2BGR)  
+cv2.imshow("OpenCV",img)  
+
+==============================
+OpenCV转换成PIL.Image格式
+
+img = cv2.imread("plane.jpg")  
+cv2.imshow("OpenCV",img)  
+image = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
+image.show()
+'''
+
 
 class face_emotion():
 
@@ -103,11 +120,14 @@ class face_emotion():
                 t = time.strftime('%y%m%d-%H%M%S',time.localtime())
                 # 保存图片
                 self.cnt+=1
-                img =  Image.open(im_rd)
-                cv2.imwrite("screenshoot"+str(self.cnt)+".jpg", img)
+                #cv2.imwrite("screenshoot"+str(self.cnt)+".jpg", im_rd)
+                #img =  Image.open(im_rd)
+                img = Image.fromarray(cv2.cvtColor(im_rd,cv2.COLOR_BGR2RGB))
+                img.save("screenshoot"+str(self.cnt)+".jpg")
                 print(t)
 
             # cap.read()
+
             # 返回两个值：
             #    一个布尔值true/false，用来判断读取视频是否成功/是否到视频末尾
             #    图像对象，图像的三维矩阵
