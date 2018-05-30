@@ -9,6 +9,7 @@ import dlib                     #人脸识别的库dlib
 import numpy as np              #数据处理的库numpy
 import cv2                      #图像处理的库OpenCv
 import time
+from PIL import Image
 
 INTERVAL = 2   #秒间隔
 
@@ -24,7 +25,7 @@ class face_emotion():
         #建cv2摄像头对象，这里使用电脑自带摄像头，如果接了外部摄像头，则自动切换到外部摄像头
         self.cap = cv2.VideoCapture(0)
         # 设置视频参数，propId设置的视频参数，value设置的参数值
-        self.cap.set(3, 480)
+        # self.cap.set(3, 480)
         # 截图screenshoot的计数器
         self.cnt = 0
         self.currenttime = time.time()
@@ -93,7 +94,7 @@ class face_emotion():
                     cv2.putText(im_rd, "nature", (d.left(), d.bottom() + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                                 (0, 0, 255), 2, 4)
 
-    def learning_face(self):
+    def capture_face(self):
         # cap.isOpened（） 返回true/false 检查初始化是否成功
         while(self.cap.isOpened()):
 
@@ -101,6 +102,9 @@ class face_emotion():
                 self.currenttime = time.time()
                 t = time.strftime('%y%m%d-%H%M%S',time.localtime())
                 # 保存图片
+                self.cnt+=1
+                img =  Image.open(im_rd)
+                cv2.imwrite("screenshoot"+str(self.cnt)+".jpg", img)
                 print(t)
 
             # cap.read()
@@ -156,7 +160,7 @@ class face_emotion():
                 break
 
             # 窗口显示
-            #cv2.imshow("camera", im_rd)
+            cv2.imshow("camera", im_rd)
             #cv2.imshow("camera_gray", img_gray)
             #print(time.time())
 
@@ -169,4 +173,4 @@ class face_emotion():
 
 if __name__ == "__main__":
     my_face = face_emotion()
-    my_face.learning_face()
+    my_face.capture_face()
