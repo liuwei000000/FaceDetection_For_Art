@@ -5,6 +5,8 @@ class VideoCamera(object):
     def __init__(self):
         # 通过opencv获取实时视频流
         self.video = cv2.VideoCapture(0) 
+        #self.video = cv2.VideoCapture('rtsp://guest:uin123456@192.168.2.50:554/h265/ch1/main/av_stream') 
+        self.video.set(3, 320)
     
     def __del__(self):
         self.video.release()
