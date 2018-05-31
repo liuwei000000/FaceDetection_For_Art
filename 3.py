@@ -10,6 +10,7 @@ import numpy as np              #数据处理的库numpy
 import cv2                      #图像处理的库OpenCv
 import time
 from PIL import Image
+import os
 
 INTERVAL = 2   #秒间隔
 
@@ -30,6 +31,11 @@ image = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
 image.show()
 '''
 
+def cfiles(dir):
+    c = 0    #计数大文件夹下共有多少个小文件夹
+    for filename in os.listdir(dir):
+        c += 1
+    return c
 
 class face_emotion():
 
@@ -43,15 +49,23 @@ class face_emotion():
         self.cap = cv2.VideoCapture(0)
         # 设置视频参数，propId设置的视频参数，value设置的参数值
         # self.cap.set(3, 480)
+        self.width = self.cap.get(3)
+        self.height = self.cap.get(4)
         # 截图screenshoot的计数器
-        self.cnt = 0
+        self.cnt = cfiles('./ims')
         self.currenttime = time.time()
+
+    def variance_of_laplacian(self, image):
+        # compute the Laplacian of the image and then return the focus
+        # measure, which is simply the variance of the Laplacian
+        return cv2.Laplacian(image, cv2.CV_64F).var()        
 
     def emotion(self, shape, im_rd, d):
         # 眉毛直线拟合数据缓冲
         line_brow_x = []
         line_brow_y = []
-
+        
+        # 计算人脸热别框边长     
         face_width = d.right() - d.left()
                 
         # 圆圈显示每个特征点
@@ -112,33 +126,25 @@ class face_emotion():
                                 (0, 0, 255), 2, 4)
 
     def capture_face(self):
+        bc_fm = 0
+        bc_im_p = None
+        bc_count = 0
+        bc_faces = None
         # cap.isOpened（） 返回true/false 检查初始化是否成功
         while(self.cap.isOpened()):
-
-            if (self.currenttime // INTERVAL != time.time() // INTERVAL):
-                self.currenttime = time.time()
-                t = time.strftime('%y%m%d-%H%M%S',time.localtime())
-                # 保存图片
-                self.cnt+=1
-                #cv2.imwrite("screenshoot"+str(self.cnt)+".jpg", im_rd)
-                #img =  Image.open(im_rd)
-                img = Image.fromarray(cv2.cvtColor(im_rd,cv2.COLOR_BGR2RGB))
-                img.save("screenshoot"+str(self.cnt)+".jpg")
-                print(t)
-
-            # cap.read()
-
             # 返回两个值：
             #    一个布尔值true/false，用来判断读取视频是否成功/是否到视频末尾
             #    图像对象，图像的三维矩阵
             flag, im_rd = self.cap.read()
+            if not flag:
+                continue
 
             # 每帧数据延时1ms，延时为0读取的是静态帧
             k = cv2.waitKey(1)
 
             # 取灰度
             img_gray = cv2.cvtColor(im_rd, cv2.COLOR_RGB2GRAY)
-
+            
             # 使用人脸检测器检测每一帧图像中的人脸。并返回人脸数rects
             faces = self.detector(img_gray, 0)
 
@@ -147,18 +153,24 @@ class face_emotion():
 
             # 如果检测到人脸
             if(len(faces)!=0):
+                # 取清晰度
+                t = self.variance_of_laplacian(img_gray)
+
+                if (t > bc_fm ):
+                    bc_fm = t
+                    bc_im_p = im_rd
+                    bc_faces = faces
+                bc_count = bc_count + 1
 
                 # 对每个人脸都标出68个特征点
                 for i in range(len(faces)):
                     # enumerate方法同时返回数据对象的索引和数据，k为索引，d为faces中的对象
                     for k, d in enumerate(faces):
                         # 用红色矩形框出人脸
-                        cv2.rectangle(im_rd, (d.left(), d.top()), (d.right(), d.bottom()), (0, 0, 255))
-                        # 计算人脸热别框边长                        
-
+                        cv2.rectangle(im_rd, (d.left(), d.top()), (d.right(), d.bottom()), (0, 0, 255))                   
                         # 使用预测器得到68点数据的坐标
-                        shape = self.predictor(im_rd, d)
-                        self.emotion(shape, im_rd, d)
+                        # shape = self.predictor(im_rd, d)
+                        # self.emotion(shape, im_rd, d)
 
                 # 标出人脸数
                 cv2.putText(im_rd, "Faces: "+str(len(faces)), (20,50), font, 1, (0, 0, 255), 1, cv2.LINE_AA)
@@ -167,13 +179,8 @@ class face_emotion():
                 cv2.putText(im_rd, "No Face", (20, 50), font, 1, (0, 0, 255), 1, cv2.LINE_AA)
 
             # 添加说明
-            im_rd = cv2.putText(im_rd, "S: screenshot", (20, 400), font, 0.8, (0, 0, 255), 1, cv2.LINE_AA)
+            #im_rd = cv2.putText(im_rd, "S: " + str(fm), (20, 400), font, 0.8, (0, 0, 255), 1, cv2.LINE_AA)
             im_rd = cv2.putText(im_rd, "Q: quit", (20, 450), font, 0.8, (0, 0, 255), 1, cv2.LINE_AA)
-
-            # 按下s键截图保存
-            if (k == ord('s')):
-                self.cnt+=1
-                cv2.imwrite("screenshoot"+str(self.cnt)+".jpg", im_rd)
 
             # 按下q键退出
             if(k == ord('q')):
@@ -184,9 +191,37 @@ class face_emotion():
             #cv2.imshow("camera_gray", img_gray)
             #print(time.time())
 
+            if (self.currenttime // INTERVAL != time.time() // INTERVAL):
+                if bc_fm == 0:
+                    continue
+                bc_fm = 0
+                self.currenttime = time.time()
+                t = time.strftime('%y%m%d-%H%M%S',time.localtime())
+                # 保存图片
+                img = Image.fromarray(cv2.cvtColor(bc_im_p,cv2.COLOR_BGR2RGB))
+                for i in range(len(faces)):
+                    # enumerate方法同时返回数据对象的索引和数据，k为索引，d为faces中的对象
+                    for k, d in enumerate(faces):
+                        il = d.left()
+                        if il < 0: il = 0                        
+                        it = d.top()
+                        if it < 0 : it = 0
+                        ir = d.right()
+                        if ir < self.width : ir = self.width
+                        ib = d.bottom()
+                        if ib > self.height : ib = self.height
+                        
+                        img_face = img.crop((il, it, ir, ib))
+                        img_face.save('./ims/' + t + '-' + str(self.cnt)+".jpg")
+                        self.cnt += 1
+                img.save('./ims/Whole-' + t + '-' + str(self.cnt)+".jpg")
+                print("%d, %d, %d, %d " % (d.left(), d.top(), d.right(), d.bottom()))
+                self.cnt += 1
+                print(t + ' | Filter:' + str(bc_count) + ' | No:' + str(self.cnt))                
+                bc_count = 0
+
         # 释放摄像头
         self.cap.release()
-
         # 删除建立的窗口
         cv2.destroyAllWindows()
 
