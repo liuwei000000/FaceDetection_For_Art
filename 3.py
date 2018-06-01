@@ -158,7 +158,7 @@ class face_emotion():
 
                 if (t > bc_fm ):
                     bc_fm = t
-                    bc_im_p = im_rd
+                    bc_im_p = im_rd.copy()
                     bc_faces = faces
                 bc_count = bc_count + 1
 
@@ -192,32 +192,31 @@ class face_emotion():
             #print(time.time())
 
             if (self.currenttime // INTERVAL != time.time() // INTERVAL):
-                if bc_fm == 0:
+                if bc_fm == 0 or len(bc_faces) == 0:
                     continue
                 bc_fm = 0
                 self.currenttime = time.time()
                 t = time.strftime('%y%m%d-%H%M%S',time.localtime())
                 # 保存图片
                 img = Image.fromarray(cv2.cvtColor(bc_im_p,cv2.COLOR_BGR2RGB))
-                for i in range(len(faces)):
+                for i in range(len(bc_faces)):
                     # enumerate方法同时返回数据对象的索引和数据，k为索引，d为faces中的对象
-                    for k, d in enumerate(faces):
+                    for k, d in enumerate(bc_faces):
                         il = d.left()
                         if il < 0: il = 0                        
                         it = d.top()
                         if it < 0 : it = 0
                         ir = d.right()
-                        if ir < self.width : ir = self.width
+                        if ir > self.width : ir = self.width
                         ib = d.bottom()
                         if ib > self.height : ib = self.height
-                        
+                        print("%d, %d, %d, %d " % (il, it, ir, ib))
                         img_face = img.crop((il, it, ir, ib))
                         img_face.save('./ims/' + t + '-' + str(self.cnt)+".jpg")
                         self.cnt += 1
                 img.save('./ims/Whole-' + t + '-' + str(self.cnt)+".jpg")
-                print("%d, %d, %d, %d " % (d.left(), d.top(), d.right(), d.bottom()))
+                print(t + ' | Filter:' + str(bc_count) + ' | No:' + str(self.cnt))
                 self.cnt += 1
-                print(t + ' | Filter:' + str(bc_count) + ' | No:' + str(self.cnt))                
                 bc_count = 0
 
         # 释放摄像头
